@@ -66,5 +66,13 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Digunakan untuk mengambil foto bukti dan foto profil.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Digunakan untuk memilih foto bukti dan foto profil dari galeri.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Digunakan untuk menyimpan latitude dan longitude laporan.</string>
+	<key>NSUserNotificationUsageDescription</key>
+	<string>Digunakan untuk memberi tahu perubahan klasifikasi laporan.</string>
 </dict>
 </plist>
