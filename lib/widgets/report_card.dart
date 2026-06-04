@@ -1,24 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../models/report_model.dart';
+import '../theme/app_theme.dart';
+import 'custom_button.dart';
+import 'stored_image.dart';
 
 class ReportCard extends StatelessWidget {
-  const ReportCard({
-    required this.report,
-    required this.onTap,
-    super.key,
-  });
+  const ReportCard({required this.report, required this.onTap, super.key});
 
   final ReportModel report;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (report.status) {
-      ReportStatus.belum => Colors.red,
-      ReportStatus.diproses => Colors.orange,
-      ReportStatus.ditangani => Colors.green,
-    };
+    final statusColor = _statusColor(report.status);
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -30,53 +25,77 @@ class ReportCard extends StatelessWidget {
             if (report.imageUrl != null && report.imageUrl!.isNotEmpty)
               AspectRatio(
                 aspectRatio: 16 / 9,
-                child: Image.network(
-                  report.imageUrl!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const ColoredBox(
-                    color: Color(0xFFE5E7EB),
-                    child: Center(child: Icon(Icons.broken_image_outlined)),
-                  ),
+                child: StoredImage(
+                  imageRef: report.imageUrl!,
+                  placeholderIcon: Icons.broken_image_outlined,
                 ),
               ),
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.deepBlue,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.report_problem_outlined,
+                          color: Colors.white,
+                          size: 21,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          report.title,
-                          style: Theme.of(context).textTheme.titleMedium,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              report.title,
+                              style: Theme.of(context).textTheme.titleMedium,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              report.reporterEmail,
+                              style: Theme.of(context).textTheme.bodySmall,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Chip(
-                        label: Text(report.status.label),
-                        visualDensity: VisualDensity.compact,
-                        side: BorderSide(color: color),
-                        labelStyle: TextStyle(color: color),
+                      StatusPill(
+                        label: report.status.label,
+                        color: statusColor,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 12),
                   Text(
                     report.description,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
-                    runSpacing: 4,
+                    runSpacing: 8,
                     children: [
-                      _InfoChip(icon: Icons.category_outlined, label: report.category),
+                      InlineInfo(
+                        icon: Icons.category_outlined,
+                        label: report.category,
+                      ),
                       if (report.latitude != null && report.longitude != null)
-                        _InfoChip(
+                        InlineInfo(
                           icon: Icons.location_on_outlined,
                           label:
                               '${report.latitude!.toStringAsFixed(5)}, ${report.longitude!.toStringAsFixed(5)}',
@@ -91,23 +110,12 @@ class ReportCard extends StatelessWidget {
       ),
     );
   }
-}
 
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 16),
-        const SizedBox(width: 4),
-        Text(label, overflow: TextOverflow.ellipsis),
-      ],
-    );
+  Color _statusColor(ReportStatus status) {
+    return switch (status) {
+      ReportStatus.belum => AppColors.danger,
+      ReportStatus.diproses => AppColors.warning,
+      ReportStatus.ditangani => AppColors.success,
+    };
   }
 }

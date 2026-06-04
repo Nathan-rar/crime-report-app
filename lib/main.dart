@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
+import 'firebase_options.dart';
+import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 
@@ -10,7 +12,9 @@ Future<void> main() async {
 
   Object? firebaseError;
   try {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
   } catch (error) {
     firebaseError = error;
   }
@@ -28,14 +32,7 @@ class CrimeReportApp extends StatelessWidget {
     return MaterialApp(
       title: 'Crime Report App',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-        inputDecorationTheme: const InputDecorationTheme(
-          filled: true,
-          fillColor: Color(0xFFF8FAFC),
-        ),
-      ),
+      theme: AppTheme.light(),
       home: firebaseError == null
           ? const AuthGate()
           : FirebaseSetupErrorScreen(error: firebaseError!),

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "898567194869",
+    "project_id": "prj-nathan",
+    "storage_bucket": "prj-nathan.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:898567194869:android:1d717e3a419125b1cbddbc",
+        "android_client_info": {
+          "package_name": "com.prjnathan.crimereport"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCNOc6xfBxP2ScHT2-GxaBD1xbRmGi5yzQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

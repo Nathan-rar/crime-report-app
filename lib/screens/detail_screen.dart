@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import '../models/comment_model.dart';
 import '../models/report_model.dart';
 import '../services/report_service.dart';
+import '../theme/app_theme.dart';
 import '../widgets/comment_item.dart';
+import '../widgets/custom_button.dart';
+import '../widgets/stored_image.dart';
 import 'report_screen.dart';
 
 class DetailScreen extends StatefulWidget {
@@ -50,7 +53,9 @@ class _DetailScreenState extends State<DetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Hapus laporan?'),
-        content: const Text('Laporan, foto, dan komentar terkait akan dihapus.'),
+        content: const Text(
+          'Laporan, foto, dan komentar terkait akan dihapus.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -119,7 +124,11 @@ class _DetailScreenState extends State<DetailScreen> {
         if (snapshot.hasError) {
           return Scaffold(
             appBar: AppBar(title: const Text('Detail Laporan')),
-            body: Center(child: Text('Gagal memuat laporan: ${snapshot.error}')),
+            body: AppStateMessage(
+              icon: Icons.cloud_off_outlined,
+              title: 'Gagal memuat laporan',
+              message: snapshot.error.toString(),
+            ),
           );
         }
 
@@ -153,99 +162,139 @@ class _DetailScreenState extends State<DetailScreen> {
               ),
             ],
           ),
-          body: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              if (report.imageUrl != null && report.imageUrl!.isNotEmpty)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: AspectRatio(
-                    aspectRatio: 16 / 9,
-                    child: Image.network(report.imageUrl!, fit: BoxFit.cover),
-                  ),
-                ),
-              const SizedBox(height: 16),
-              Text(report.title, style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 8),
-              Text(report.description),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  Chip(
-                    avatar: const Icon(Icons.category_outlined, size: 18),
-                    label: Text(report.category),
-                  ),
-                  if (report.latitude != null && report.longitude != null)
-                    Chip(
-                      avatar: const Icon(Icons.location_on_outlined, size: 18),
-                      label: Text(
-                        '${report.latitude!.toStringAsFixed(5)}, ${report.longitude!.toStringAsFixed(5)}',
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<ReportStatus>(
-                value: report.status,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Klasifikasi penanganan',
-                  prefixIcon: Icon(Icons.assignment_turned_in_outlined),
-                ),
-                items: ReportStatus.values
-                    .map((status) => DropdownMenuItem(
-                          value: status,
-                          child: Text(status.label),
-                        ))
-                    .toList(),
-                onChanged: (status) {
-                  if (status != null && status != report.status) {
-                    _updateStatus(report, status);
-                  }
-                },
-              ),
-              const SizedBox(height: 24),
-              Text('Komentar', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 8),
-              _CommentList(
-                reportId: widget.reportId,
-                reportService: _reportService,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _commentController,
-                      minLines: 1,
-                      maxLines: 3,
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        hintText: 'Tulis komentar',
-                      ),
+          body: AppPage(
+            maxWidth: 820,
+            child: ListView(
+              children: [
+                if (report.imageUrl != null && report.imageUrl!.isNotEmpty) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: AspectRatio(
+                      aspectRatio: 16 / 9,
+                      child: StoredImage(imageRef: report.imageUrl!),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    tooltip: 'Kirim komentar',
-                    onPressed: _isSendingComment ? null : _sendComment,
-                    icon: _isSendingComment
-                        ? const SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.send),
-                  ),
+                  const SizedBox(height: 12),
                 ],
-              ),
-            ],
+                AppPanel(
+                  icon: Icons.report_problem_outlined,
+                  title: report.title,
+                  subtitle: report.reporterEmail,
+                  trailing: StatusPill(
+                    label: report.status.label,
+                    color: _statusColor(report.status),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(report.description),
+                      const SizedBox(height: 14),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          InlineInfo(
+                            icon: Icons.category_outlined,
+                            label: report.category,
+                          ),
+                          if (report.latitude != null &&
+                              report.longitude != null)
+                            InlineInfo(
+                              icon: Icons.location_on_outlined,
+                              label:
+                                  '${report.latitude!.toStringAsFixed(5)}, ${report.longitude!.toStringAsFixed(5)}',
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                AppPanel(
+                  icon: Icons.assignment_turned_in_outlined,
+                  title: 'Klasifikasi Penanganan',
+                  subtitle:
+                      'Perubahan status akan dicatat untuk notifikasi update kasus.',
+                  child: DropdownButtonFormField<ReportStatus>(
+                    initialValue: report.status,
+                    decoration: const InputDecoration(
+                      labelText: 'Status kasus',
+                      prefixIcon: Icon(Icons.sync_alt_outlined),
+                    ),
+                    items: ReportStatus.values
+                        .map(
+                          (status) => DropdownMenuItem(
+                            value: status,
+                            child: Text(status.label),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (status) {
+                      if (status != null && status != report.status) {
+                        _updateStatus(report, status);
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+                AppPanel(
+                  icon: Icons.forum_outlined,
+                  title: 'Komentar',
+                  subtitle: 'Catatan tindak lanjut atau klarifikasi laporan.',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _CommentList(
+                        reportId: widget.reportId,
+                        reportService: _reportService,
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _commentController,
+                              minLines: 1,
+                              maxLines: 3,
+                              decoration: const InputDecoration(
+                                hintText: 'Tulis komentar',
+                                prefixIcon: Icon(Icons.chat_bubble_outline),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton.filled(
+                            tooltip: 'Kirim komentar',
+                            onPressed: _isSendingComment ? null : _sendComment,
+                            icon: _isSendingComment
+                                ? const SizedBox.square(
+                                    dimension: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.send),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
     );
+  }
+
+  Color _statusColor(ReportStatus status) {
+    return switch (status) {
+      ReportStatus.belum => AppColors.danger,
+      ReportStatus.diproses => AppColors.warning,
+      ReportStatus.ditangani => AppColors.success,
+    };
   }
 }
 
@@ -261,7 +310,11 @@ class _CommentList extends StatelessWidget {
       stream: reportService.streamComments(reportId),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Text('Gagal memuat komentar: ${snapshot.error}');
+          return AppStateMessage(
+            icon: Icons.cloud_off_outlined,
+            title: 'Gagal memuat komentar',
+            message: snapshot.error.toString(),
+          );
         }
 
         if (!snapshot.hasData) {
@@ -270,11 +323,16 @@ class _CommentList extends StatelessWidget {
 
         final comments = snapshot.data!;
         if (comments.isEmpty) {
-          return const Text('Belum ada komentar.');
+          return const AppStateMessage(
+            icon: Icons.chat_bubble_outline,
+            title: 'Belum ada komentar',
+          );
         }
 
         return Column(
-          children: comments.map((comment) => CommentItem(comment: comment)).toList(),
+          children: comments
+              .map((comment) => CommentItem(comment: comment))
+              .toList(),
         );
       },
     );

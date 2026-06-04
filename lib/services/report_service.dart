@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/comment_model.dart';
@@ -18,7 +17,10 @@ class ReportService {
       _firestore.collection('reports');
 
   Stream<List<ReportModel>> streamReports() {
-    return _reports.orderBy('createdAt', descending: true).snapshots().map(
+    return _reports
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map(
           (snapshot) => snapshot.docs.map(ReportModel.fromDocument).toList(),
         );
   }
@@ -42,7 +44,8 @@ class ReportService {
     required String description,
     required String category,
     XFile? image,
-    Position? position,
+    double? latitude,
+    double? longitude,
   }) async {
     final user = _requireUser();
     final doc = _reports.doc();
@@ -65,14 +68,18 @@ class ReportService {
       reporterEmail: user.email ?? '-',
       status: ReportStatus.belum,
       imageUrl: imageUrl,
-      latitude: position?.latitude,
-      longitude: position?.longitude,
+      latitude: latitude,
+      longitude: longitude,
       createdAt: now,
       updatedAt: now,
     );
 
     await doc.set(report.toMap());
-    await _notificationService.subscribeToReport(doc.id);
+    try {
+      await _notificationService.subscribeToReport(doc.id);
+    } catch (_) {
+      // Notifikasi bersifat tambahan; laporan tetap berhasil dibuat.
+    }
     return doc.id;
   }
 
@@ -82,7 +89,8 @@ class ReportService {
     required String description,
     required String category,
     XFile? image,
-    Position? position,
+    double? latitude,
+    double? longitude,
   }) async {
     String? imageUrl;
     if (image != null) {
@@ -102,9 +110,9 @@ class ReportService {
     if (imageUrl != null) {
       data['imageUrl'] = imageUrl;
     }
-    if (position != null) {
-      data['latitude'] = position.latitude;
-      data['longitude'] = position.longitude;
+    if (latitude != null && longitude != null) {
+      data['latitude'] = latitude;
+      data['longitude'] = longitude;
     }
 
     await _reports.doc(reportId).update(data);
@@ -148,7 +156,9 @@ class ReportService {
         .collection('comments')
         .orderBy('createdAt', descending: false)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map(CommentModel.fromDocument).toList());
+        .map(
+          (snapshot) => snapshot.docs.map(CommentModel.fromDocument).toList(),
+        );
   }
 
   Future<void> addComment({

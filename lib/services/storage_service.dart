@@ -1,27 +1,22 @@
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'local_image_store.dart';
+
 class StorageService {
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final LocalImageStore _localImages = LocalImageStore.instance;
 
   Future<String> uploadReportPhoto({
     required XFile file,
     required String reportId,
-  }) async {
-    return _uploadFile(
-      file: file,
-      path: 'reports/$reportId/${DateTime.now().millisecondsSinceEpoch}.jpg',
-    );
+  }) {
+    return _saveLocalImage(file: file, ownerType: 'report', ownerId: reportId);
   }
 
   Future<String> uploadUserPhoto({
     required XFile file,
     required String userId,
-  }) async {
-    return _uploadFile(
-      file: file,
-      path: 'users/$userId/profile.jpg',
-    );
+  }) {
+    return _saveLocalImage(file: file, ownerType: 'user', ownerId: userId);
   }
 
   Future<void> deleteByUrl(String? url) async {
@@ -29,17 +24,27 @@ class StorageService {
       return;
     }
 
-    await _storage.refFromURL(url).delete();
+    if (_localImages.isLocalImageRef(url)) {
+      await _localImages.deleteImage(url);
+    }
   }
 
-  Future<String> _uploadFile({
+  Future<String> _saveLocalImage({
     required XFile file,
-    required String path,
+    required String ownerType,
+    required String ownerId,
   }) async {
-    final ref = _storage.ref(path);
-    final bytes = await file.readAsBytes();
-    final metadata = SettableMetadata(contentType: file.mimeType ?? 'image/jpeg');
-    final task = await ref.putData(bytes, metadata);
-    return task.ref.getDownloadURL();
+    try {
+      final bytes = await file.readAsBytes();
+      return _localImages.saveImage(
+        ownerType: ownerType,
+        ownerId: ownerId,
+        fileName: file.name,
+        contentType: file.mimeType ?? 'image/jpeg',
+        bytes: bytes,
+      );
+    } catch (error) {
+      throw Exception('Gagal menyimpan foto ke database lokal SQLite: $error');
+    }
   }
 }

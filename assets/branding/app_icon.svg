@@ -1,0 +1,13 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="1024" rx="210" fill="#F9FCFD"/>
+  <rect x="96" y="96" width="832" height="832" rx="180" fill="#F9FCFD" stroke="#EAF4F8" stroke-width="8"/>
+  <circle cx="512" cy="422" r="260" fill="#08213F"/>
+  <path d="M512 185L710 272V424C710 546 634 640 512 688C390 640 314 546 314 424V272L512 185Z" fill="#123F66" stroke="#D9E2EA" stroke-width="22" stroke-linejoin="round"/>
+  <path d="M512 225L664 292V421C664 513 607 590 512 632C417 590 360 513 360 421V292L512 225Z" fill="#23648D" opacity="0.58"/>
+  <circle cx="504" cy="382" r="112" stroke="white" stroke-width="30"/>
+  <circle cx="504" cy="382" r="64" stroke="white" stroke-width="24"/>
+  <path d="M431 464L333 562" stroke="white" stroke-width="38" stroke-linecap="round"/>
+  <rect x="280" y="558" width="78" height="158" rx="28" transform="rotate(45 280 558)" fill="#123F66" stroke="white" stroke-width="24"/>
+  <path d="M493 389L548 447L653 308" stroke="#E54142" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="512" y="812" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="86" font-weight="800" letter-spacing="4" fill="#08213F">CRIME REPORT</text>
+</svg>
