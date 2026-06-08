@@ -51,39 +51,33 @@ class AuthGate extends StatelessWidget {
     final authService = AuthService();
 
     return StreamBuilder<User?>(
+      initialData: authService.currentUser,
       stream: authService.authStateChanges,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+        final user = snapshot.data;
+        if (user == null) {
+          return const LoginScreen();
         }
 
-        if (snapshot.hasData) {
-          return StreamBuilder<UserModel?>(
-            stream: authService.streamCurrentUserProfile(),
-            builder: (context, profileSnapshot) {
-              if (profileSnapshot.connectionState == ConnectionState.waiting) {
-                return const Scaffold(
-                  body: Center(child: CircularProgressIndicator()),
-                );
-              }
-
-              if (profileSnapshot.hasError) {
-                return const HomeScreen();
-              }
-
-              final profile = profileSnapshot.data;
-              if (profile?.isAdmin ?? false) {
-                return const AdminReportsScreen();
-              }
-
+        return StreamBuilder<UserModel?>(
+          stream: authService.streamCurrentUserProfile(),
+          builder: (context, profileSnapshot) {
+            if (profileSnapshot.connectionState == ConnectionState.waiting) {
               return const HomeScreen();
-            },
-          );
-        }
+            }
 
-        return const LoginScreen();
+            if (profileSnapshot.hasError) {
+              return const HomeScreen();
+            }
+
+            final profile = profileSnapshot.data;
+            if (profile?.isAdmin ?? false) {
+              return const AdminReportsScreen();
+            }
+
+            return const HomeScreen();
+          },
+        );
       },
     );
   }

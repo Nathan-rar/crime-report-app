@@ -41,6 +41,30 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <script src="flutter_bootstrap.js" async></script>
+  <script>
+    const loadFlutterApp = () => {
+      const script = document.createElement('script');
+      script.src = 'flutter_bootstrap.js';
+      script.async = true;
+      document.body.appendChild(script);
+    };
+
+    if ('serviceWorker' in navigator) {
+      Promise.all([
+        navigator.serviceWorker
+          .getRegistrations()
+          .then((registrations) =>
+            Promise.all(registrations.map((registration) => registration.unregister())),
+          ),
+        'caches' in window
+          ? caches
+              .keys()
+              .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+          : Promise.resolve(),
+      ]).finally(loadFlutterApp);
+    } else {
+      loadFlutterApp();
+    }
+  </script>
 </body>
 </html>
