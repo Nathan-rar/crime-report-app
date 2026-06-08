@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../models/user_model.dart';
 import 'storage_service.dart';
 
 class AuthService {
@@ -12,6 +13,55 @@ class AuthService {
   User? get currentUser => _auth.currentUser;
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
+
+  Stream<UserModel?> streamCurrentUserProfile() {
+    return authStateChanges.asyncExpand((user) {
+      if (user == null) {
+        return Stream<UserModel?>.value(null);
+      }
+
+      return _firestore.collection('users').doc(user.uid).snapshots().map((
+        document,
+      ) {
+        if (!document.exists) {
+          return UserModel(
+            id: user.uid,
+            email: user.email ?? '',
+            name: user.displayName ?? '',
+            photoUrl: user.photoURL,
+            createdAt: DateTime.now(),
+          );
+        }
+
+        return UserModel.fromDocument(document);
+      });
+    });
+  }
+
+  Future<UserModel?> getCurrentUserProfile() async {
+    final user = currentUser;
+    if (user == null) {
+      return null;
+    }
+
+    final document = await _firestore.collection('users').doc(user.uid).get();
+    if (!document.exists) {
+      return UserModel(
+        id: user.uid,
+        email: user.email ?? '',
+        name: user.displayName ?? '',
+        photoUrl: user.photoURL,
+        createdAt: DateTime.now(),
+      );
+    }
+
+    return UserModel.fromDocument(document);
+  }
+
+  Future<bool> isCurrentUserAdmin() async {
+    final profile = await getCurrentUserProfile();
+    return profile?.isAdmin ?? false;
+  }
 
   Future<UserCredential> signIn({
     required String email,
@@ -56,6 +106,7 @@ class AuthService {
       'email': user.email,
       'name': name.trim(),
       'photoUrl': photoUrl,
+      'role': UserRole.user.value,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
       'fcmTokens': <String>[],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/comment_model.dart';
 import '../models/report_model.dart';
+import '../services/auth_service.dart';
 import '../services/report_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/comment_item.dart';
@@ -20,13 +21,43 @@ class DetailScreen extends StatefulWidget {
 
 class _DetailScreenState extends State<DetailScreen> {
   final _reportService = ReportService();
+  final _authService = AuthService();
   final _commentController = TextEditingController();
   bool _isSendingComment = false;
+  bool _isCheckingAdmin = true;
+  bool _isAdmin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAdminAccess();
+  }
 
   @override
   void dispose() {
     _commentController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadAdminAccess() async {
+    try {
+      final isAdmin = await _authService.isCurrentUserAdmin();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isAdmin = isAdmin;
+        _isCheckingAdmin = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isAdmin = false;
+        _isCheckingAdmin = false;
+      });
+    }
   }
 
   Future<void> _updateStatus(ReportModel report, ReportStatus status) async {
@@ -143,24 +174,29 @@ class _DetailScreenState extends State<DetailScreen> {
         return Scaffold(
           appBar: AppBar(
             title: const Text('Detail Laporan'),
-            actions: [
-              IconButton(
-                tooltip: 'Edit',
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ReportScreen(initialReport: report),
+            actions: _isAdmin
+                ? [
+                    IconButton(
+                      tooltip: 'Edit',
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => ReportScreen(
+                              initialReport: report,
+                              adminMode: true,
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.edit_outlined),
                     ),
-                  );
-                },
-                icon: const Icon(Icons.edit_outlined),
-              ),
-              IconButton(
-                tooltip: 'Hapus',
-                onPressed: () => _deleteReport(report),
-                icon: const Icon(Icons.delete_outline),
-              ),
-            ],
+                    IconButton(
+                      tooltip: 'Hapus',
+                      onPressed: () => _deleteReport(report),
+                      icon: const Icon(Icons.delete_outline),
+                    ),
+                  ]
+                : null,
           ),
           body: AppPage(
             maxWidth: 820,
@@ -209,33 +245,38 @@ class _DetailScreenState extends State<DetailScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                AppPanel(
-                  icon: Icons.assignment_turned_in_outlined,
-                  title: 'Klasifikasi Penanganan',
-                  subtitle:
-                      'Perubahan status akan dicatat untuk notifikasi update kasus.',
-                  child: DropdownButtonFormField<ReportStatus>(
-                    initialValue: report.status,
-                    decoration: const InputDecoration(
-                      labelText: 'Status kasus',
-                      prefixIcon: Icon(Icons.sync_alt_outlined),
+                if (_isCheckingAdmin) ...[
+                  const SizedBox(height: 12),
+                  const LinearProgressIndicator(),
+                ] else if (_isAdmin) ...[
+                  const SizedBox(height: 12),
+                  AppPanel(
+                    icon: Icons.assignment_turned_in_outlined,
+                    title: 'Klasifikasi Penanganan',
+                    subtitle:
+                        'Perubahan status akan dicatat untuk notifikasi update kasus.',
+                    child: DropdownButtonFormField<ReportStatus>(
+                      initialValue: report.status,
+                      decoration: const InputDecoration(
+                        labelText: 'Status kasus',
+                        prefixIcon: Icon(Icons.sync_alt_outlined),
+                      ),
+                      items: ReportStatus.values
+                          .map(
+                            (status) => DropdownMenuItem(
+                              value: status,
+                              child: Text(status.label),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (status) {
+                        if (status != null && status != report.status) {
+                          _updateStatus(report, status);
+                        }
+                      },
                     ),
-                    items: ReportStatus.values
-                        .map(
-                          (status) => DropdownMenuItem(
-                            value: status,
-                            child: Text(status.label),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (status) {
-                      if (status != null && status != report.status) {
-                        _updateStatus(report, status);
-                      }
-                    },
                   ),
-                ),
+                ],
                 const SizedBox(height: 12),
                 AppPanel(
                   icon: Icons.forum_outlined,

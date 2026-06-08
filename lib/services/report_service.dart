@@ -4,12 +4,14 @@ import 'package:image_picker/image_picker.dart';
 
 import '../models/comment_model.dart';
 import '../models/report_model.dart';
+import 'auth_service.dart';
 import 'notification_service.dart';
 import 'storage_service.dart';
 
 class ReportService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final AuthService _authService = AuthService();
   final StorageService _storageService = StorageService();
   final NotificationService _notificationService = NotificationService();
 
@@ -92,6 +94,8 @@ class ReportService {
     double? latitude,
     double? longitude,
   }) async {
+    await _requireAdmin();
+
     String? imageUrl;
     if (image != null) {
       imageUrl = await _storageService.uploadReportPhoto(
@@ -122,6 +126,7 @@ class ReportService {
     required ReportModel report,
     required ReportStatus status,
   }) async {
+    await _requireAdmin();
     final user = _requireUser();
 
     await _reports.doc(report.id).update({
@@ -138,6 +143,8 @@ class ReportService {
   }
 
   Future<void> deleteReport(ReportModel report) async {
+    await _requireAdmin();
+
     final comments = await _reports.doc(report.id).collection('comments').get();
     final batch = _firestore.batch();
 
@@ -186,5 +193,13 @@ class ReportService {
       throw Exception('User belum login.');
     }
     return user;
+  }
+
+  Future<void> _requireAdmin() async {
+    _requireUser();
+    final isAdmin = await _authService.isCurrentUserAdmin();
+    if (!isAdmin) {
+      throw Exception('Aksi ini hanya tersedia untuk admin.');
+    }
   }
 }

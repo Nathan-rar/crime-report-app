@@ -11,9 +11,10 @@ import '../widgets/stored_image.dart';
 import 'map_picker_screen.dart';
 
 class ReportScreen extends StatefulWidget {
-  const ReportScreen({this.initialReport, super.key});
+  const ReportScreen({this.initialReport, this.adminMode = false, super.key});
 
   final ReportModel? initialReport;
+  final bool adminMode;
 
   @override
   State<ReportScreen> createState() => _ReportScreenState();
@@ -254,7 +255,7 @@ class _ReportScreenState extends State<ReportScreen> {
               AppButton(
                 label: _isEdit ? 'Simpan Perubahan' : 'Kirim Laporan',
                 icon: Icons.save_outlined,
-                onPressed: _save,
+                onPressed: _isEdit && !widget.adminMode ? null : _save,
                 isLoading: _isLoading,
               ),
             ],
