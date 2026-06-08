@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/custom_button.dart';
 import 'detail_screen.dart';
+import 'login_screen.dart';
 import 'report_screen.dart';
 
 class AdminReportsScreen extends StatefulWidget {
@@ -28,6 +29,13 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
 
   Future<void> _signOut() async {
     await _auth.signOut();
+    if (!mounted) {
+      return;
+    }
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
   }
 
   Future<void> _deleteReport(ReportModel report) async {
@@ -94,9 +102,7 @@ class _AdminReportsScreenState extends State<AdminReportsScreen> {
 
   void _openCreateReport() {
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const ReportScreen(adminMode: true),
-      ),
+      MaterialPageRoute(builder: (_) => const ReportScreen(adminMode: true)),
     );
   }
 
@@ -318,11 +324,7 @@ class _AdminReportTile extends StatelessWidget {
               if (compact) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    details,
-                    const SizedBox(height: 12),
-                    controls,
-                  ],
+                  children: [details, const SizedBox(height: 12), controls],
                 );
               }
 
@@ -452,10 +454,8 @@ class _ReportControls extends StatelessWidget {
           ),
           items: ReportStatus.values
               .map(
-                (status) => DropdownMenuItem(
-                  value: status,
-                  child: Text(status.label),
-                ),
+                (status) =>
+                    DropdownMenuItem(value: status, child: Text(status.label)),
               )
               .toList(),
           onChanged: (status) {

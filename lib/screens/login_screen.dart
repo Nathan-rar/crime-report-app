@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/custom_button.dart';
+import 'admin_login_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({this.initialSignUp = false, super.key});
@@ -68,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
           photo: _photo,
         );
       } else {
-        await _authService.signIn(
+        await _authService.signInReporter(
           email: _emailController.text,
           password: _passwordController.text,
         );
@@ -175,6 +176,23 @@ class _LoginScreenState extends State<LoginScreen> {
                                 : 'Belum punya akun? Daftar',
                           ),
                         ),
+                        if (!_isSignUp) ...[
+                          const Divider(height: 24),
+                          OutlinedButton.icon(
+                            onPressed: _isLoading
+                                ? null
+                                : () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const AdminLoginScreen(),
+                                      ),
+                                    );
+                                  },
+                            icon: const Icon(Icons.admin_panel_settings),
+                            label: const Text('Masuk sebagai Admin'),
+                          ),
+                        ],
                       ],
                     ),
                   ),

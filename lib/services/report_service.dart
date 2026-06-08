@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../models/comment_model.dart';
 import '../models/report_model.dart';
 import 'auth_service.dart';
+import 'local_report_store.dart';
 import 'notification_service.dart';
 import 'storage_service.dart';
 
@@ -12,6 +13,7 @@ class ReportService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final AuthService _authService = AuthService();
+  final LocalReportStore _localReports = LocalReportStore.instance;
   final StorageService _storageService = StorageService();
   final NotificationService _notificationService = NotificationService();
 
@@ -19,6 +21,10 @@ class ReportService {
       _firestore.collection('reports');
 
   Stream<List<ReportModel>> streamReports() {
+    if (_authService.isLocalAdminSignedIn) {
+      return _localReports.streamReports();
+    }
+
     return _reports
         .orderBy('createdAt', descending: true)
         .snapshots()
@@ -28,12 +34,20 @@ class ReportService {
   }
 
   Stream<ReportModel> streamReport(String reportId) {
+    if (_authService.isLocalAdminSignedIn) {
+      return _localReports.streamReport(reportId);
+    }
+
     return _reports.doc(reportId).snapshots().map((document) {
       return ReportModel.fromDocument(document);
     });
   }
 
   Future<ReportModel?> getReport(String reportId) async {
+    if (_authService.isLocalAdminSignedIn) {
+      return _localReports.getReport(reportId);
+    }
+
     final document = await _reports.doc(reportId).get();
     if (!document.exists) {
       return null;
@@ -49,7 +63,12 @@ class ReportService {
     double? latitude,
     double? longitude,
   }) async {
-    final user = _requireUser();
+    final user = _auth.currentUser;
+    final isLocalAdmin = _authService.isLocalAdminSignedIn;
+    if (user == null && !isLocalAdmin) {
+      throw Exception('User belum login.');
+    }
+
     final doc = _reports.doc();
     String? imageUrl;
 
@@ -60,14 +79,27 @@ class ReportService {
       );
     }
 
+    if (isLocalAdmin) {
+      return _localReports.createReport(
+        title: title,
+        description: description,
+        category: category,
+        reporterId: 'local-admin',
+        reporterEmail: AuthService.localAdminEmail,
+        imageUrl: imageUrl,
+        latitude: latitude,
+        longitude: longitude,
+      );
+    }
+
     final now = DateTime.now();
     final report = ReportModel(
       id: doc.id,
       title: title.trim(),
       description: description.trim(),
       category: category.trim(),
-      reporterId: user.uid,
-      reporterEmail: user.email ?? '-',
+      reporterId: user?.uid ?? 'local-admin',
+      reporterEmail: user?.email ?? AuthService.localAdminEmail,
       status: ReportStatus.belum,
       imageUrl: imageUrl,
       latitude: latitude,
@@ -104,6 +136,19 @@ class ReportService {
       );
     }
 
+    if (_authService.isLocalAdminSignedIn) {
+      await _localReports.updateReport(
+        reportId: reportId,
+        title: title,
+        description: description,
+        category: category,
+        imageUrl: imageUrl,
+        latitude: latitude,
+        longitude: longitude,
+      );
+      return;
+    }
+
     final data = <String, dynamic>{
       'title': title.trim(),
       'description': description.trim(),
@@ -127,7 +172,12 @@ class ReportService {
     required ReportStatus status,
   }) async {
     await _requireAdmin();
-    final user = _requireUser();
+    final user = _auth.currentUser;
+
+    if (_authService.isLocalAdminSignedIn) {
+      await _localReports.updateStatus(report: report, status: status);
+      return;
+    }
 
     await _reports.doc(report.id).update({
       'status': status.label,
@@ -138,12 +188,18 @@ class ReportService {
       reportId: report.id,
       reportTitle: report.title,
       status: status.label,
-      changedBy: user.email ?? user.uid,
+      changedBy: user?.email ?? AuthService.localAdminEmail,
     );
   }
 
   Future<void> deleteReport(ReportModel report) async {
     await _requireAdmin();
+
+    if (_authService.isLocalAdminSignedIn) {
+      await _localReports.deleteReport(report);
+      await _storageService.deleteByUrl(report.imageUrl);
+      return;
+    }
 
     final comments = await _reports.doc(report.id).collection('comments').get();
     final batch = _firestore.batch();
@@ -158,6 +214,10 @@ class ReportService {
   }
 
   Stream<List<CommentModel>> streamComments(String reportId) {
+    if (_authService.isLocalAdminSignedIn) {
+      return _localReports.streamComments(reportId);
+    }
+
     return _reports
         .doc(reportId)
         .collection('comments')
@@ -172,15 +232,30 @@ class ReportService {
     required String reportId,
     required String message,
   }) async {
-    final user = _requireUser();
+    final user = _auth.currentUser;
+    final isLocalAdmin = _authService.isLocalAdminSignedIn;
+    if (user == null && !isLocalAdmin) {
+      throw Exception('User belum login.');
+    }
+
+    if (isLocalAdmin) {
+      await _localReports.addComment(
+        reportId: reportId,
+        userId: 'local-admin',
+        userEmail: AuthService.localAdminEmail,
+        message: message,
+      );
+      return;
+    }
+
     final comment = _reports.doc(reportId).collection('comments').doc();
 
     await comment.set(
       CommentModel(
         id: comment.id,
         reportId: reportId,
-        userId: user.uid,
-        userEmail: user.email ?? '-',
+        userId: user?.uid ?? 'local-admin',
+        userEmail: user?.email ?? AuthService.localAdminEmail,
         message: message.trim(),
         createdAt: DateTime.now(),
       ).toMap(),
@@ -196,6 +271,10 @@ class ReportService {
   }
 
   Future<void> _requireAdmin() async {
+    if (_authService.isLocalAdminSignedIn) {
+      return;
+    }
+
     _requireUser();
     final isAdmin = await _authService.isCurrentUserAdmin();
     if (!isAdmin) {

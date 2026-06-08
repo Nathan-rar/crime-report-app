@@ -6,11 +6,17 @@ import '../models/user_model.dart';
 import 'storage_service.dart';
 
 class AuthService {
+  static const localAdminEmail = 'admin@local.app';
+  static const localAdminPassword = 'admin123';
+  static bool _isLocalAdminSignedIn = false;
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final StorageService _storageService = StorageService();
 
   User? get currentUser => _auth.currentUser;
+
+  bool get isLocalAdminSignedIn => _isLocalAdminSignedIn;
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
@@ -59,6 +65,10 @@ class AuthService {
   }
 
   Future<bool> isCurrentUserAdmin() async {
+    if (_isLocalAdminSignedIn) {
+      return true;
+    }
+
     final profile = await getCurrentUserProfile();
     return profile?.isAdmin ?? false;
   }
@@ -71,6 +81,39 @@ class AuthService {
       email: email.trim(),
       password: password,
     );
+  }
+
+  Future<UserCredential> signInReporter({
+    required String email,
+    required String password,
+  }) async {
+    final credential = await signIn(email: email, password: password);
+    final profile = await getCurrentUserProfile();
+
+    if (profile?.isAdmin ?? false) {
+      await signOut();
+      throw Exception('Akun admin harus masuk melalui halaman admin.');
+    }
+
+    return credential;
+  }
+
+  Future<void> signInAdmin({
+    required String email,
+    required String password,
+  }) async {
+    if (email.trim() == localAdminEmail && password == localAdminPassword) {
+      _isLocalAdminSignedIn = true;
+      return;
+    }
+
+    await signIn(email: email, password: password);
+    final profile = await getCurrentUserProfile();
+
+    if (!(profile?.isAdmin ?? false)) {
+      await signOut();
+      throw Exception('Akun ini bukan admin.');
+    }
   }
 
   Future<UserCredential> register({
@@ -115,7 +158,8 @@ class AuthService {
     return credential;
   }
 
-  Future<void> signOut() {
-    return _auth.signOut();
+  Future<void> signOut() async {
+    _isLocalAdminSignedIn = false;
+    await _auth.signOut();
   }
 }
